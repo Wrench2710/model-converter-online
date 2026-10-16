@@ -1,0 +1,91 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: modeldesk
+      MYSQL_USER: modeldesk
+      MYSQL_PASSWORD: modeldesk
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+
+  backend:
+    build: ./backend
+    command: sh -c "python manage.py migrate && daphne -b 0.0.0.0 -p 8000 config.asgi:application"
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      MYSQL_HOST: mysql
+      MYSQL_DATABASE: modeldesk
+      MYSQL_USER: modeldesk
+      MYSQL_PASSWORD: modeldesk
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - media_data:/app/media
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: ./backend
+    command: celery -A config worker -l INFO --concurrency=${CONVERTER_CONCURRENCY:-2}
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      MYSQL_HOST: mysql
+      MYSQL_DATABASE: modeldesk
+      MYSQL_USER: modeldesk
+      MYSQL_PASSWORD: modeldesk
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - media_data:/app/media
+    depends_on:
+      backend:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
+  cleanup:
+    build: ./backend
+    command: celery -A config beat -l INFO
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      MYSQL_HOST: mysql
+      MYSQL_DATABASE: modeldesk
+      MYSQL_USER: modeldesk
+      MYSQL_PASSWORD: modeldesk
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - media_data:/app/media
+    depends_on:
+      backend:
+        condition: service_started
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend
+
+volumes:
+  mysql_data:
+  media_data:

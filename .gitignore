@@ -1,0 +1,51 @@
+# Dependencies and generated builds
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+
+# Python environments and caches
+**/__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Runtime data and conversion results
+/backend/media/
+*.sqlite3
+*.sqlite3-*
+*.log
+celerybeat-schedule*
+/artifacts/
+/results/
+/releases/
+
+# Local secrets and editor/OS files
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+.idea/
+.vscode/
+.DS_Store
+._*
+
+# Local AI instructions and engineering specifications
+AGENTS.md
+CLAUDE.md
+/.agents/
+/.codex/
+/.scratch/
+/docs/agents/
+/docs/adr/
+/GLOSSARY.md
+/GLOSSARY-MAP.md
+/UI_STYLE.md
+/项目描述.txt
